@@ -4,8 +4,14 @@
 # @Email   : im.cyx@foxmail.com
 # @File    : configs.py
 # @Software: PyCharm
-# @Project : try
+# @Project : PicConvert
 
+
+import json
+
+""" include 4 modes, choose 1~4 as default mode(s) """
+default_modes = ['csdn']
+total_modes = ['zhihu', 'csdn', 'bili', 'jianshu', 'bokeyuan']
 
 class Setting_config(object):
     """
@@ -13,35 +19,25 @@ class Setting_config(object):
     """
 
     ''' config extensions which will be detected as pattern '''
-    ''' (Warning: some websites cannot support all extensions below) '''
-    ext = ['png', 'bmp', 'jpg', 'jpeg', 'jpe', 'jfif', 'gif', 'tif', 'dib', 'webp', 'ico']
+    ''' (Warning!! some websites cannot support all extensions below) '''
+    ext = ['png', 'bmp', 'jpg', 'jpeg', 'gif']
+    pattern = ''.join(']\(?.*\.' + i + '\)|' + '="+.*\.' + i + '"|' for i in ext)[:-1]
 
-    ''' include 4 modes, choose 1~4 as default mode(s) '''
-    default_mode = ['bili']
-    all_convert_modes = ['zhihu', 'csdn', 'bili', 'jianshu']
-
-    ''' csdn img-bed config '''
-    csdn_cookies = {
-        "UserName": "qq_42059060",
-        "UserToken": "b6b8fd30627d4c639b6f0d619841f39a",
-    }
-
-    ''' zhihu img-bed config '''
-    zhihu_cookies = {
-        "z_c0": '"2|1:0|10:1648889311|4:z_c0|92:Mi4xcEZuTkNBQUFBQUFBSUozTmRKcTRFeWNBQUFDRUFsVk4zcHB2WWdCMXJJNWREcG9KNU5vNXFVU1pqRGhTWFh6Zmt3|e8a9e1846f8c55a976a3a269d924d26a83feb9562835bf4a850399004a818358"',
-    }
-    # choose pictures convert status in zhihu (src, watermark_src, original_src)
+    ''' loading json file '''
+    with open("cookies.json", 'r') as fp:
+        dicts = json.loads(fp.read())
+    # csdn img-bed config
+    csdn_cookies = dicts['csdn_cookies']
+    # bilibili img-bed config
+    bili_cookies = dicts['bili_cookies']
+    # jianshu img-bed config
+    jianshu_cookies = dicts['jianshu_cookies']
+    # bokeyuan img-bed config
+    bokeyuan_cookies = dicts['bokeyuan_cookies']
+    # zhihu img-bed config
+    zhihu_cookies = dicts['zhihu_cookies']
+    # zhihu convert status (src, watermark_src, original_src)
     zhihu_mode = "original_src"
-
-    ''' bilibili img-bed config '''
-    bili_cookies = {
-        'SESSDATA': '92c1ec7f%2C1649473981%2Cb03b3*a1'
-    }
-
-    ''' jianshu img-bed config'''
-    jianshu_cookies = {
-        '_m7e_session_core': '5b69abcac7daf4cb25f3926723bdef38'
-    }
 
 
 class CSDN_config(Setting_config):
@@ -68,8 +64,6 @@ class CSDN_config(Setting_config):
     }
     convert_url = "https://imgservice.csdn.net/img-convert/external/storage"
 
-    pattern = ''.join(']\(?.*\.' + i + '\)|' for i in Setting_config.ext)[:-1]
-
 class ZHIHU_config(Setting_config):
     cookies = Setting_config.zhihu_cookies
     mode = Setting_config.zhihu_mode
@@ -85,7 +79,6 @@ class ZHIHU_config(Setting_config):
     mode_dict = ['src', 'watermark_src', 'original_src']
     fields = {'source': 'article'}
     convert_url = "https://zhuanlan.zhihu.com/api/uploaded_images"
-    pattern = ''.join(']\(?.*\.' + i + '\)|' for i in Setting_config.ext)[:-1]
 
 class BILI_config(Setting_config):
     cookies = Setting_config.bili_cookies
@@ -100,7 +93,6 @@ class BILI_config(Setting_config):
     fields = {'csrf': 'c109546c087f7d2f45f48e365c96e91e'}
     cookies['bili_jct'] = 'c109546c087f7d2f45f48e365c96e91e'
     convert_url = "https://api.bilibili.com/x/article/creative/article/upcover"
-    pattern = ''.join(']\(?.*\.' + i + '\)|' for i in Setting_config.ext)[:-1]
 
 class JIANSHU_config(Setting_config):
     cookies = Setting_config.jianshu_cookies
@@ -114,4 +106,17 @@ class JIANSHU_config(Setting_config):
     }
     token_url = "https://www.jianshu.com/upload_images/token.json?filename=image."
     convert_url = "https://upload.qiniup.com/"
-    pattern = ''.join(']\(?.*\.' + i + '\)|' for i in Setting_config.ext)[:-1]
+
+class BOKEYUAN_config(Setting_config):
+    cookies = Setting_config.bokeyuan_cookies
+
+    boundary = '----WebKitFormBoundary0YtEgqslRTAf1lEB'
+    headers = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36",
+        "origin": "https://i.cnblogs.com",
+        "referer": "https://i.cnblogs.com/",
+        "content-type": f"multipart/form-data; boundary={boundary}",
+        'x-xsrf-token': 'CfDJ8AuMt_3FvyxIgNOR82PHE4mor62BfuI58rIEHB4fHCfGnPXDShqSPjlPtYED-W3kcbAFy0VuhQU0xFNDVgbXQb_603YRMn_Mp9RbW9NkTV9pxpK8Yz3FQ0Oh9fw5jTMrmQZUZICAjUyRZVBgJ9H9zfpYW-QlLgVF6iJeJfR7ojwvT8QyU536rfXsAPFTUbL_xQ',
+    }
+    fields = {'host': 'www.cnblogs.com', 'uploadType': 'Paste'}
+    convert_url = "https://upload.cnblogs.com/imageuploader/CorsUpload/"

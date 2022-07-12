@@ -1,203 +1,93 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2022/3/30 22:12
+# @Time    : 2022/1/14 18:31
 # @Author  : CYX
 # @Email   : im.cyx@foxmail.com
 # @File    : convert.py
 # @Software: PyCharm
-# @Project : try
+# @Project : PicConvert
 
+import argparse
 import os
-import re
-import json
-import time
-import uuid
-import base64
-import requests
-from io import BytesIO
-from requests_toolbelt.multipart.encoder import MultipartEncoder
 
-from configs import CSDN_config, ZHIHU_config, BILI_config, JIANSHU_config
+from src import img_convert
+from configs import default_modes, total_modes
 
-
-class CSDNConvert(CSDN_config):
+def get_name_list():
     """
-    CSDN convert apply
+    scan all root directory and children directory to find all markdown file
+    :return: all markdown name files
     """
-    def __init__(self, root):
-        self.root = root
+    name_list = []
+    for files in os.listdir('./'):
+        __, ext = os.path.splitext(files)
+        if ext == '.md':
+            name_list.append(files)
+    return name_list
 
-        def get_short_id():
-            """
-            get a uuid form array
-            :return: uuid form short id
-            """
-            # support .jpg .gif .png .jpeg .bmp .webp, size less than 5 Mb
-            array = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r",
-                     "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R",
-                     "S", "T", "U", "V", "W", "X", "Y", "Z"]
-            id_str = str(uuid.uuid4()).replace("-", '')
-            buffer = []
+def handler(file, mode, link=False):
+    if link:
+        res = []
+        for f in file:
+            print(f)
+            res.append(img_convert(mode, f, os.path.dirname(f), link=True))
+        print("Upload Success:")
+        print('\n'.join(res))
+    else:
+        print(f"Reading File: {file}")
+        print("-"*50)
+        with open(file, "rb") as fp:
+            res = img_convert(mode, fp.read().decode("utf-8"), os.path.dirname(file))
 
-            for i in range(0, 8):
-                start = i * 4
-                end = i * 4 + 4
-                val = int(id_str[start:end], 16)
-                buffer.append(array[val % 62])
+        new_file = f'New_{mode}_{os.path.basename(file)}'
+        print("-"*50)
+        print(f"Writing File: {new_file}\n")
+        with open(new_file, "wb+") as fp2:
+            fp2.write(res.encode("utf-8"))
 
-            return "".join(buffer)
+def main():
+    parser = argparse.ArgumentParser(description='This script for you to store/convert pictures between pictures bed')
+    parser.add_argument('-f', default='', dest='file', type=str,
+                        help='set convert markdown file (optional, default select all markdown files in root directory)')
+    parser.add_argument('-m', default='', dest='mode', type=str,
+                        help='set convert mode: zhihu/csdn/bili/jianshu (optional, default set in configs.py)')
+    parser.add_argument('-d', default='', dest='direct', type=str, nargs='+',
+                        help='directly convert')
+    args = parser.parse_args()
 
-        self.fields.update({'uuid': 'img-' + get_short_id() + '-' + str(round(time.time() * 1000))})
+    # judge convert which type pic bed
+    if args.mode != '':
+        if args.mode in total_modes:
+            modes = [args.mode]
+        else:
+            raise NameError("Pls enter a correct mode!!")
+    else:
+        modes = default_modes
 
-    def convert(self, text):
-        res_text = ''
-        last_end = 0
-        for query in re.finditer(self.pattern, text, re.I):
-            src = query.group()[2:-1]
-            # convert address
-            if src.find('http') >= 0:
-                self.fields.update({'imgUrl': src})
-                payload = json.dumps(self.fields)
-                res = requests.post(self.convert_url, data=payload, cookies=self.cookies, headers=self.headers)
-            # upload imgs and get address
+    # if direct convert links/img_files
+    if args.direct:
+        name_list = args.direct
+        for mode in modes:
+            handler(name_list, mode, link=True)
+
+    # if convert files
+    else:
+        # judge which file convert
+        if args.file != '':
+            if os.path.exists(args.file):
+                name_list = [args.file]
             else:
-                self.up_headers['x-image-suffix'] = src.split('.')[-1]
-                up_res = requests.get(self.up_url, cookies=self.cookies, headers=self.up_headers).json()
-                # if request legal
-                if up_res['code'] != 200:
-                    raise Exception(up_res['msg'])
+                raise NameError("Pls enter a correct file name!")
+        else:
+            name_list = get_name_list()
+            if not name_list:
+                raise Exception('Markdown files not found!')
 
-                up_res = up_res['data']
-                data = {
-                    'key': up_res['filePath'],
-                    'policy': up_res['policy'],
-                    'OSSAccessKeyId': up_res['accessId'],
-                    'signature': up_res['signature'],
-                    'callback': up_res['callbackUrl'],
-                    'file': open(os.path.join(self.root, src), 'rb').read()
-                }
-                multipart_encoder = MultipartEncoder(fields=data, boundary=self.boundary)
-                res = requests.post(self.path_url, data=multipart_encoder, cookies=self.cookies, headers=self.path_headers)
+        print(f"\nFiles: {'  '.join(name_list)}", f"\nModes: {'  '.join(modes)}", '\n')
 
-            # if request legal
-            if res.json()['code'] != 200:
-                raise Exception(res.json()['msg'])
+        # handle every markdown files or every links/img_files
+        for file in name_list:
+            for mode in modes:
+                handler(file, mode)
 
-            res_url = res.json()['data']['url'] if src.find('http') >= 0 else res.json()['data']['imageUrl']
-            # if get available convert address
-            if res_url:
-                print(f"\t {query.group()[2:-1]} -> {res_url}")
-            else:
-                raise Exception('Convert false!')
-
-            # change source file, then do another search
-            res_text += text[last_end:query.start() + 2] + res_url
-            last_end = query.end() - 1
-        res_text += text[last_end:]
-
-        return res_text
-
-class ZHIHUConvert(ZHIHU_config):
-    """
-    ZHIHU convert apply
-    """
-    def __init__(self):
-        if self.mode not in self.mode_dict:
-            raise Exception(" You enter a not support picture mode!")
-
-    def convert(self, text):
-        res_text = ''
-        last_end = 0
-        for query in re.finditer(self.pattern, text, re.I):
-            self.fields['url'] = query.group()[2:-1]
-            multipart_encoder = MultipartEncoder(fields=self.fields, boundary=self.boundary)
-            res = requests.post(self.convert_url, data=multipart_encoder, cookies=self.cookies, headers=self.headers)
-
-            # if request legal
-            if res.status_code != 200:
-                raise Exception(res.json()['error']['message'])
-
-            res_url = res.json()[self.mode]
-
-            if res_url:
-                print(f"\t {query.group()[2:-1]} -> {res_url}")
-            else:
-                raise Exception('Convert false!')
-
-            # change source file, then do another search
-            res_text += text[last_end:query.start() + 2] + res_url
-            last_end = query.end() - 1
-        res_text += text[last_end:]
-
-        return res_text
-
-class BILIConvert(BILI_config):
-    def __init__(self, root):
-        self.root = root
-
-    def convert(self, text):
-        res_text = ''
-        last_end = 0
-        for query in re.finditer(self.pattern, text, re.I):
-            # concat data
-            src = query.group()[2:-1]
-            if src.find('http') >= 0:
-                content = BytesIO(requests.get(src).content).read()
-            else:
-                content = open(os.path.join(self.root, src), 'rb').read()
-            self.fields['cover'] = self.b64_head + str(base64.b64encode(content))[2:-1]
-
-            res = requests.post(self.convert_url, data=self.fields, cookies=self.cookies, headers=self.headers)
-            # if request legal
-            if res.json()['code'] != 0:
-                raise TypeError(res.json()['message'])
-
-            res_url = res.json()['data']['url']
-            if res_url:
-                print(f"\t {query.group()[2:-1]} -> {res_url}")
-            else:
-                raise Exception('Convert false!')
-
-            # change source file, then do another search
-            res_text += text[last_end:query.start() + 2] + res_url
-            last_end = query.end() - 1
-        res_text += text[last_end:]
-
-        return res_text
-
-class JIANSHUConvert(JIANSHU_config):
-    def __init__(self, root):
-        self.root = root
-
-    def convert(self, text):
-        res_text = ''
-        last_end = 0
-        for query in re.finditer(self.pattern, text, re.I):
-            # concat data
-            src = query.group()[2:-1]
-            payload = requests.get(self.token_url + src.split('.')[-1], headers=self.headers, cookies=self.cookies).json()
-            if src.find('http') >= 0:
-                payload['file'] = requests.get(src).content
-            else:
-                payload['file'] = open(os.path.join(self.root, src), 'rb').read()
-            multipart_encoder = MultipartEncoder(fields=payload, boundary=self.boundary)
-
-            # request
-            res = requests.post(self.convert_url, data=multipart_encoder, headers=self.headers)
-            # if request legal
-            if res.status_code != 200:
-                raise Exception(res.json()['error'])
-
-            res_url = res.json()['url']
-
-            if res_url:
-                print(f"\t {query.group()[2:-1]} -> {res_url}")
-            else:
-                raise Exception('Convert false!')
-
-            # change source file, then do another search
-            res_text += text[last_end:query.start() + 2] + res_url
-            last_end = query.end() - 1
-        res_text += text[last_end:]
-
-        return res_text
+if __name__ == '__main__':
+    main()
