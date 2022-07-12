@@ -8,9 +8,13 @@
 
 
 import json
+import os
+import sys
+
+path = os.path.join(os.path.split(os.path.abspath(sys.argv[0]))[0], "cookies.json")
 
 ''' loading json file '''
-with open("cookies.json", 'r') as fp:
+with open(path, 'r') as fp:
     dicts = json.loads(fp.read())
 
 """ include 4 modes, choose 1~4 as default mode(s) """
