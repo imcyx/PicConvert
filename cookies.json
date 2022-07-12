@@ -1,5 +1,7 @@
 {
-  "csdn_cookies": {
+  "default_modes": ["csdn"],
+  "total_modes" : ["zhihu", "csdn", "bili", "jianshu", "bokeyuan"],
+  "csdn_cookies" : {
     "UserName": "",
     "UserToken": ""
   },
@@ -7,6 +9,7 @@
     "z_c0": ""
   },
   "bili_cookies": {
+    "bili_jct": "",
     "SESSDATA": ""
   },
   "jianshu_cookies": {

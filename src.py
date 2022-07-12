@@ -130,10 +130,12 @@ class JIANSHUConvert(JIANSHU_config):
     def convert(self, src):
         # concat data
         payload = requests.get(self.token_url + src.split('.')[-1], headers=self.headers, cookies=self.cookies).json()
+
         if src.find('http') >= 0:
-            payload['file'] = requests.get(src).content
+            payload['file'] = requests.get(src, headers=self.headers).content
         else:
             payload['file'] = open(os.path.join(self.root, src), 'rb').read()
+        payload['x:protocol'] = 'https'
         multipart_encoder = MultipartEncoder(fields=payload, boundary=self.boundary)
 
         # request

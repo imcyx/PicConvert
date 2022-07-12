@@ -9,9 +9,13 @@
 
 import json
 
+''' loading json file '''
+with open("cookies.json", 'r') as fp:
+    dicts = json.loads(fp.read())
+
 """ include 4 modes, choose 1~4 as default mode(s) """
-default_modes = ['csdn']
-total_modes = ['zhihu', 'csdn', 'bili', 'jianshu', 'bokeyuan']
+default_modes = dicts['default_modes']
+total_modes = dicts['total_modes']
 
 class Setting_config(object):
     """
@@ -23,9 +27,6 @@ class Setting_config(object):
     ext = ['png', 'bmp', 'jpg', 'jpeg', 'gif']
     pattern = ''.join(']\(?.*\.' + i + '\)|' + '="+.*\.' + i + '"|' for i in ext)[:-1]
 
-    ''' loading json file '''
-    with open("cookies.json", 'r') as fp:
-        dicts = json.loads(fp.read())
     # csdn img-bed config
     csdn_cookies = dicts['csdn_cookies']
     # bilibili img-bed config
@@ -70,7 +71,7 @@ class ZHIHU_config(Setting_config):
 
     boundary = '----WebKitFormBoundaryA7rHHPjs3umheW1O'
     headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36",
         "referer": "https://zhuanlan.zhihu.com/write",
         "origin": "https://zhuanlan.zhihu.com",
         "x-requested-with": "fetch",
@@ -90,19 +91,20 @@ class BILI_config(Setting_config):
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
     }
     b64_head = 'data:image;base64,'
-    fields = {'csrf': 'c109546c087f7d2f45f48e365c96e91e'}
-    cookies['bili_jct'] = 'c109546c087f7d2f45f48e365c96e91e'
+    fields = {'csrf': cookies['bili_jct']}
     convert_url = "https://api.bilibili.com/x/article/creative/article/upcover"
 
 class JIANSHU_config(Setting_config):
     cookies = Setting_config.jianshu_cookies
 
-    boundary = '----WebKitFormBoundaryEjkSZUASM1SA9AKn'
+    boundary = '------WebKitFormBoundaryoDKCqoQaipUHiBdS'
     headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36",
-        "Host": "www.jianshu.com",
-        "Referer": "https://www.jianshu.com/writer",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
+        "Host": "upload.qiniup.com",
+        "Origin": "https://www.jianshu.com",
+        "Referer": "https://www.jianshu.com/",
         "content-type": f"multipart/form-data; boundary={boundary}",
+        "Sec-Fetch-Dest": "empty"
     }
     token_url = "https://www.jianshu.com/upload_images/token.json?filename=image."
     convert_url = "https://upload.qiniup.com/"
